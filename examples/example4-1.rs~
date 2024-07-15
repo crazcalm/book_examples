@@ -1,0 +1,6 @@
+fn main() {
+    let mut list: Vec<i32> = vec![-10, -7, -3, 0, 3, 7, 10];
+    list.sort_by_key(|x| x.rem_euclid(7));
+
+    println!("{:?}", list)
+}
