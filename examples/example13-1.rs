@@ -62,11 +62,6 @@ impl Ord for Card {
     }
 }
 
-/* TODO: Fix in book --
-
-When I compare two hands, I want the greater hand to return Ordering::Greater.
-To make sure that happens, I needed to put the "greater" poker hand type at the bottom.
-*/
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Clone)]
 enum PokerHandType {
     HighCard,
@@ -85,33 +80,6 @@ enum PokerHandType {
 struct PokerHand {
     cards: Vec<Card>,
     poker_hand_type: Option<PokerHandType>,
-}
-
-impl PartialOrd for PokerHand {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(&other))
-    }
-}
-
-impl Ord for PokerHand {
-    fn cmp(&self, other: &Self) -> Ordering {
-        /*
-        Note: I call `reverse` on the `self.cards.cmp` because Cards default ordering is reversed and made 11 less than 10 so that
-        when we sorted our hands, the higher number was in front. Now that we are comparing the values of the hands, we need
-        11 to be greater than 10, so we must `reverse` the outcome of comparing the vector of cards. In layman terms, the second
-        `reverse` negates the affects of the first `reverse` giving us the default comparison for a vector of numbers.
-         */
-        self.poker_hand_type
-            .clone()
-            .expect("Must call sort_hand before sorting")
-            .cmp(
-                &other
-                    .poker_hand_type
-                    .clone()
-                    .expect("Must call sort_hand_before sorting"),
-            )
-            .then(self.cards.cmp(&other.cards).reverse())
-    }
 }
 
 impl PokerHand {
@@ -309,115 +277,21 @@ impl PokerHand {
     }
 }
 
+fn main() {
+    let mut hand = PokerHand::new();
+    hand.add_card(Card::new(3, Suit::Club).unwrap()).unwrap();
+    hand.add_card(Card::new(2, Suit::Diamond).unwrap()).unwrap();
+    hand.add_card(Card::new(2, Suit::Heart).unwrap()).unwrap();
+    hand.add_card(Card::new(3, Suit::Heart).unwrap()).unwrap();
+    hand.add_card(Card::new(2, Suit::Club).unwrap()).unwrap();
+
+    let _ = hand.sort_hand().unwrap();
+    println!("{:#?}", hand);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn poker_hands_cmp() {
-        let cases = vec![
-            (
-                "Same hand different Suit -- RoyalFlush",
-                PokerHand {
-                    poker_hand_type: Some(PokerHandType::RoyalFlush),
-                    cards: vec![
-                        Card::new(14, Suit::Club).unwrap(),
-                        Card::new(13, Suit::Club).unwrap(),
-                        Card::new(12, Suit::Club).unwrap(),
-                        Card::new(11, Suit::Club).unwrap(),
-                        Card::new(10, Suit::Club).unwrap(),
-                    ],
-                },
-                PokerHand {
-                    poker_hand_type: Some(PokerHandType::RoyalFlush),
-                    cards: vec![
-                        Card::new(14, Suit::Heart).unwrap(),
-                        Card::new(13, Suit::Heart).unwrap(),
-                        Card::new(12, Suit::Heart).unwrap(),
-                        Card::new(11, Suit::Heart).unwrap(),
-                        Card::new(10, Suit::Heart).unwrap(),
-                    ],
-                },
-                Ordering::Equal,
-            ),
-            (
-                "PokerHandType gets compared first -- FourOfAKind > HighCard",
-                PokerHand {
-                    poker_hand_type: Some(PokerHandType::FourOfAKind),
-                    cards: vec![
-                        Card::new(2, Suit::Club).unwrap(),
-                        Card::new(2, Suit::Heart).unwrap(),
-                        Card::new(2, Suit::Spade).unwrap(),
-                        Card::new(2, Suit::Club).unwrap(),
-                        Card::new(10, Suit::Diamond).unwrap(),
-                    ],
-                },
-                PokerHand {
-                    poker_hand_type: Some(PokerHandType::HighCard),
-                    cards: vec![
-                        Card::new(14, Suit::Club).unwrap(),
-                        Card::new(11, Suit::Club).unwrap(),
-                        Card::new(8, Suit::Diamond).unwrap(),
-                        Card::new(5, Suit::Club).unwrap(),
-                        Card::new(2, Suit::Heart).unwrap(),
-                    ],
-                },
-                Ordering::Greater,
-            ),
-            (
-                "Same PokerHandType, but the hands are not equal",
-                PokerHand {
-                    poker_hand_type: Some(PokerHandType::FourOfAKind),
-                    cards: vec![
-                        Card::new(2, Suit::Club).unwrap(),
-                        Card::new(2, Suit::Heart).unwrap(),
-                        Card::new(2, Suit::Spade).unwrap(),
-                        Card::new(2, Suit::Club).unwrap(),
-                        Card::new(10, Suit::Diamond).unwrap(),
-                    ],
-                },
-                PokerHand {
-                    poker_hand_type: Some(PokerHandType::FourOfAKind),
-                    cards: vec![
-                        Card::new(2, Suit::Club).unwrap(),
-                        Card::new(2, Suit::Heart).unwrap(),
-                        Card::new(2, Suit::Spade).unwrap(),
-                        Card::new(2, Suit::Club).unwrap(),
-                        Card::new(11, Suit::Diamond).unwrap(),
-                    ],
-                },
-                Ordering::Less,
-            ),
-            (
-                "Extra case for Straights when the Ace counts as 1",
-                PokerHand {
-                    poker_hand_type: Some(PokerHandType::Straight),
-                    cards: vec![
-                        Card::new(5, Suit::Club).unwrap(),
-                        Card::new(4, Suit::Club).unwrap(),
-                        Card::new(3, Suit::Diamond).unwrap(),
-                        Card::new(2, Suit::Heart).unwrap(),
-                        Card::new(14, Suit::Club).unwrap(),
-                    ],
-                },
-                PokerHand {
-                    poker_hand_type: Some(PokerHandType::Straight),
-                    cards: vec![
-                        Card::new(6, Suit::Club).unwrap(),
-                        Card::new(5, Suit::Club).unwrap(),
-                        Card::new(4, Suit::Diamond).unwrap(),
-                        Card::new(3, Suit::Heart).unwrap(),
-                        Card::new(2, Suit::Club).unwrap(),
-                    ],
-                },
-                Ordering::Less,
-            ),
-        ];
-
-        for (name, hand_1, hand_2, expected) in cases {
-            assert_eq!(hand_1.cmp(&hand_2), expected, "Case: {name}");
-        }
-    }
 
     #[test]
     fn poker_hand_sort_hand() {
@@ -487,6 +361,29 @@ mod tests {
                         Card::new(2, Suit::Heart).unwrap(),
                         Card::new(2, Suit::Spade).unwrap(),
                         Card::new(2, Suit::Club).unwrap(),
+                        Card::new(10, Suit::Diamond).unwrap(),
+                    ],
+                },
+            ),
+            (
+                "Two Pair",
+                PokerHand {
+                    poker_hand_type: None,
+                    cards: vec![
+                        Card::new(2, Suit::Club).unwrap(),
+                        Card::new(10, Suit::Diamond).unwrap(),
+                        Card::new(2, Suit::Spade).unwrap(),
+                        Card::new(5, Suit::Heart).unwrap(),
+                        Card::new(5, Suit::Club).unwrap(),
+                    ],
+                },
+                PokerHand {
+                    poker_hand_type: Some(PokerHandType::TwoPair),
+                    cards: vec![
+                        Card::new(5, Suit::Heart).unwrap(),
+                        Card::new(5, Suit::Club).unwrap(),
+                        Card::new(2, Suit::Club).unwrap(),
+                        Card::new(2, Suit::Spade).unwrap(),
                         Card::new(10, Suit::Diamond).unwrap(),
                     ],
                 },

@@ -62,7 +62,7 @@ impl Ord for Card {
     }
 }
 
-#[derive(Debug, Ord, PartialOrd, Eq, PartialEq)]
+#[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Clone)]
 enum PokerHandType {
     HighCard,
     OnePair,
@@ -203,18 +203,88 @@ impl PokerHand {
             Some(ref _hand_type) => Ok(()),
         }
     }
+
+    fn sort_hand(&mut self) -> Result<(), String> {
+        let _ = self.set_hand_type()?;
+        let poker_hand_type = self.poker_hand_type.clone().unwrap();
+        let card_rank_histogram = self.card_rank_histogram();
+
+        match poker_hand_type {
+            PokerHandType::OnePair | PokerHandType::ThreeOfAKind | PokerHandType::FourOfAKind => {
+                let priority_card_rank = card_rank_histogram[0].0;
+
+                self.cards.sort_by(|a, b| {
+                    if a.rank == priority_card_rank && b.rank == priority_card_rank {
+                        Ordering::Equal
+                    } else if a.rank == priority_card_rank && b.rank != priority_card_rank {
+                        Ordering::Less
+                    } else if a.rank != priority_card_rank && b.rank == priority_card_rank {
+                        Ordering::Greater
+                    } else {
+                        a.cmp(&b)
+                    }
+                });
+
+                Ok(())
+            }
+            PokerHandType::RoyalFlush
+            | PokerHandType::StraightFlush
+            | PokerHandType::Flush
+            | PokerHandType::Straight
+            | PokerHandType::HighCard => {
+                self.cards.sort();
+
+                if poker_hand_type == PokerHandType::StraightFlush
+                    || poker_hand_type == PokerHandType::Straight
+                {
+                    // In the case where the straight is Ace, 5, 4 ,3, 2, 1, we need to list
+                    // the left by 1 -> 5, 4, 3, 2, Ace
+                    if self.cards[0].rank == 14 && self.cards[1].rank == 5 {
+                        self.cards.rotate_left(1);
+                    }
+                }
+                Ok(())
+            }
+            PokerHandType::FullHouse | PokerHandType::TwoPair => {
+                let priority_1 = card_rank_histogram[0].0;
+                let priority_2 = card_rank_histogram[1].0;
+
+                self.cards.sort_by(|a, b| {
+                    if a.rank == priority_1 && b.rank == priority_1 {
+                        a.cmp(&b)
+                    } else if a.rank == priority_1 && b.rank == priority_2 {
+                        Ordering::Less
+                    } else if a.rank == priority_2 && b.rank == priority_1 {
+                        Ordering::Greater
+                    } else if a.rank == priority_2 && b.rank == priority_2 {
+                        a.cmp(&b)
+                    } else if a.rank == priority_1 && b.rank != priority_1 && b.rank != priority_2 {
+                        Ordering::Less
+                    } else if a.rank == priority_2 && b.rank != priority_1 && b.rank != priority_2 {
+                        Ordering::Less
+                    } else if a.rank != priority_1 && a.rank != priority_2 && b.rank == priority_1 {
+                        Ordering::Greater
+                    } else if a.rank != priority_1 && a.rank != priority_2 && b.rank == priority_2 {
+                        Ordering::Greater
+                    } else {
+                        a.cmp(&b)
+                    }
+                });
+
+                Ok(())
+            }
+        }
+    }
 }
 
 fn main() {
     let mut hand = PokerHand::new();
+    hand.add_card(Card::new(3, Suit::Club).unwrap()).unwrap();
+    hand.add_card(Card::new(2, Suit::Diamond).unwrap()).unwrap();
     hand.add_card(Card::new(2, Suit::Heart).unwrap()).unwrap();
     hand.add_card(Card::new(3, Suit::Heart).unwrap()).unwrap();
-    hand.add_card(Card::new(4, Suit::Heart).unwrap()).unwrap();
-    hand.add_card(Card::new(5, Suit::Heart).unwrap()).unwrap();
-    hand.add_card(Card::new(14, Suit::Heart).unwrap()).unwrap();
+    hand.add_card(Card::new(2, Suit::Club).unwrap()).unwrap();
 
-    let _ = hand.set_hand_type().unwrap();
-    assert_eq!(hand.poker_hand_type, Some(PokerHandType::StraightFlush));
-
+    let _ = hand.sort_hand().unwrap();
     println!("{:#?}", hand);
 }

@@ -63,16 +63,16 @@ impl Ord for Card {
 
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq)]
 enum PokerHandType {
-    RoyalFlush,
-    StraightFlush,
-    FourOfAKind,
-    FullHouse,
-    Flush,
-    Straight,
-    ThreeOfAKind,
-    TwoPair,
-    OnePair,
     HighCard,
+    OnePair,
+    TwoPair,
+    ThreeOfAKind,
+    Straight,
+    Flush,
+    FullHouse,
+    FourOfAKind,
+    StraightFlush,
+    RoyalFlush,
 }
 
 #[derive(Debug)]
